@@ -4,11 +4,13 @@ use log::{error, info, warn};
 use std::io::Cursor;
 use std::io::ErrorKind::{BrokenPipe, ConnectionAborted};
 use std::net::SocketAddr;
+use std::time::Duration;
 use std::{env, io};
 use thiserror::Error;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
-use tokio::{select};
+use tokio::select;
+use tokio::time::timeout;
 
 enum PacketType {
     Auth,
@@ -52,7 +54,8 @@ enum RconError {
 async fn accept(rcon_password: &str, mut socket: TcpStream, socket_addr: SocketAddr) -> Result<()> {
     let mut buf = vec![0u8; 1500];
     socket.read(&mut buf).await?;
-    auth(rcon_password, &mut socket, &buf).await?;
+
+    timeout(Duration::from_millis(0), auth(rcon_password, &mut socket, &buf)).await??;
 
     info!("Authorized connection {}", socket_addr);
 
@@ -90,6 +93,10 @@ async fn read_packet(packet: &[u8]) -> Result<RconPacket> {
     let mut cursor = Cursor::new(packet);
 
     let packet_size = cursor.read_i32_le().await?;
+    if packet_size > 4096 {
+        bail!(io::Error::new(io::ErrorKind::InvalidData, "packet size too big; probably not a rcon packet"))
+    }
+    
     let packet_id = cursor.read_i32_le().await?;
     let packet_type = cursor.read_i32_le().await?;
 
