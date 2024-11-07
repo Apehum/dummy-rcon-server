@@ -1,0 +1,9 @@
+version: "3.8"
+
+services:
+  dummy-rcon-server:
+    build: "."
+    ports:
+      - "25575:25575"
+    env_file:
+      - .env
