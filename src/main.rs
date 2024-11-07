@@ -53,7 +53,10 @@ enum RconError {
 
 async fn accept(rcon_password: &str, mut socket: TcpStream, socket_addr: SocketAddr) -> Result<()> {
     let mut buf = vec![0u8; 1500];
-    socket.read(&mut buf).await?;
+    let bytes_read = socket.read(&mut buf).await?;
+    if bytes_read == 0 {
+        return Ok(());
+    }
 
     timeout(Duration::from_secs(5), auth(rcon_password, &mut socket, &buf)).await??;
 
