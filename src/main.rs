@@ -55,7 +55,7 @@ async fn accept(rcon_password: &str, mut socket: TcpStream, socket_addr: SocketA
     let mut buf = vec![0u8; 1500];
     socket.read(&mut buf).await?;
 
-    timeout(Duration::from_millis(0), auth(rcon_password, &mut socket, &buf)).await??;
+    timeout(Duration::from_secs(5), auth(rcon_password, &mut socket, &buf)).await??;
 
     info!("Authorized connection {}", socket_addr);
 
@@ -64,7 +64,7 @@ async fn accept(rcon_password: &str, mut socket: TcpStream, socket_addr: SocketA
         if bytes_read == 0 {
             break Ok(());
         }
-        
+
         let packet = read_packet(&buf).await?;
 
         if packet.packet_type == PacketType::ExecCommand.into() {
@@ -96,7 +96,7 @@ async fn read_packet(packet: &[u8]) -> Result<RconPacket> {
     if packet_size > 4096 {
         bail!(io::Error::new(io::ErrorKind::InvalidData, "packet size too big; probably not a rcon packet"))
     }
-    
+
     let packet_id = cursor.read_i32_le().await?;
     let packet_type = cursor.read_i32_le().await?;
 
